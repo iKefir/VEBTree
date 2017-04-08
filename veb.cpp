@@ -14,17 +14,19 @@ public:
     
     ~VEBTree() {
         if (aux != nullptr) {
-            for (ull i = aux -> getMin(); i <= aux -> getMax(); i = next(i)) {
-                childrens[get_high_half(i)] -> ~VEBTree<HALF>();
+            for (ull i = aux -> getMin(); i <= aux -> getMax(); i = aux -> next(i)) {
+                delete childrens[i];
+                childrens.erase(i);
             }
-            aux -> ~VEBTree<HALF>();
+            delete aux;
+            aux = nullptr;
         }
     }
     
     void add(ull x) {
-        assert(x < (1ull << S));
+        if (S < 64 && x >= (1ull << S)) return;
         
-        if (min_value && max_value == NO) {
+        if (is_empty()) {
             min_value = max_value = x;
             return;
         }
@@ -36,8 +38,9 @@ public:
             }
             return;
         }
-        
-        if (S == 1) return;
+        if (x == min_value || x == max_value) {
+            return;
+        }
         
         //adding deeper
         if (min_value > x) {
@@ -47,57 +50,52 @@ public:
             std::swap(x, max_value);
         }
         
-        ull const high = get_high_half(x), low = get_low_half(x);
-        if (childrens.find(high) == childrens.end()) {
-            childrens[high] = new VEBTree<HALF>();
+        if (S > 1) {
+            ull const high = get_high_half(x), low = get_low_half(x);
+            if (aux == nullptr) {
+                aux = new VEBTree<S - HALF>();
+            }
+            if (childrens.find(high) == childrens.end()) {
+                childrens[high] = new VEBTree<HALF>();
+                aux -> add(high);
+            }
+            childrens[high] -> add(low);
         }
-        childrens[high] -> add(low);
-        if (aux == nullptr) {
-            aux = new VEBTree<HALF>();
-        }
-        aux -> add(high);
         
     }
     
-    void remove(ull x) {
-        if (min_value == max_value) {
-            if (x == min_value) {
-                if (aux != nullptr) {
-                    aux -> remove(get_high_half(x));
-                    if (aux -> is_empty()) {
-                        aux -> ~VEBTree<HALF>();
-                        aux = nullptr;
-                    }
-                }
-                min_value = max_value = NO;
-            }
+    void remove(ull x) { 
+        if (min_value == x && max_value == x) {
+            min_value = max_value = NO;
             return;
         }
         ull high, low;
         if (x == min_value) {
+            if (aux == nullptr) {
+                min_value = max_value;
+                return;
+            }
             min_value = next(x);
-            high = get_high_half(min_value);
-            low = get_low_half(min_value);
-            if (childrens.find(high) != childrens.end()) {
-                childrens[high] -> remove(low);
-            }
-            //TODO: ?
-            return;
         }
-        if (x == max_value) {
+        else if (x == max_value) {
+            if (aux == nullptr) {
+                max_value = min_value;
+                return;
+            }
             max_value = prev(x);
-            high = get_high_half(max_value);
-            low = get_low_half(max_value);
-            if (childrens.find(high) != childrens.end()) {
-                childrens[high] -> remove(low);
-            }
-            //TODO: ?
-            return;
         }
-        
-        high = get_high_half(x), low = get_low_half(x);
+        high = get_high_half(x);
+        low = get_low_half(x);
         if (childrens.find(high) != childrens.end()) {
             childrens[high] -> remove(low);
+            if (childrens[high] -> is_empty()) {
+                aux -> remove(high);
+                childrens.erase(high);
+            }
+            if (aux -> is_empty()) {
+                delete aux;
+                aux = nullptr;
+            }
         }
         
     }
@@ -118,7 +116,7 @@ public:
         return max_value;
     }
     
-    bool is_empty() {
+    bool is_empty() const {
         return min_value == NO;
     }
     
@@ -127,11 +125,14 @@ public:
         ull new_min = (comparator(min_value, max_value)) ? min_value : max_value;
         ull new_max = (new_min == min_value) ? max_value : min_value;
         
-        if (x == new_max) {
+        if (comparator(new_max, x) ||  new_max == x || is_empty()) {
             return NO;
         }
         if (comparator(x, new_min)) {
             return new_min;
+        }
+        if (aux == nullptr) {
+            return new_max;
         }
         
         ull const high = get_high_half(x), low = get_low_half(x);
@@ -155,7 +156,7 @@ public:
 private:
     
     static const unsigned int HALF = S >> 1;
-    VEBTree<HALF> * aux;
+    VEBTree<S - HALF> * aux;
     std::map<ull, VEBTree<HALF> *> childrens;
     ull min_value, max_value;
     
@@ -175,10 +176,10 @@ private:
 
 int main() {
     VEBTree<20> tree;
-    tree.add(5);
-    tree.add(11);
-    tree.add(10);
-    std::cout << tree.next(5) << " " << tree.prev(5) << std::endl;
+    tree.add(27);
+    tree.add(86);
+    tree.add(4);
+    std::cout << tree.prev(25) << std::endl;
     tree.remove(10);
     tree.add(7);
     tree.add(3);
