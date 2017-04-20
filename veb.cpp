@@ -1,7 +1,6 @@
 #include <map>
 #include <iostream>
 #include <cassert>
-#include <functional>
 #include "veb.h"
 
 template<unsigned int S>
@@ -76,6 +75,7 @@ public:
                 return;
             }
             min_value = next(x);
+            x = min_value;
         }
         else if (x == max_value) {
             if (aux == nullptr) {
@@ -83,6 +83,7 @@ public:
                 return;
             }
             max_value = prev(x);
+            x = max_value;
         }
         high = get_high_half(x);
         low = get_low_half(x);
@@ -146,7 +147,7 @@ public:
         if (aux != nullptr) {
             subres = aux -> abstract_next(high, comparator);
             if (subres != NO) {
-                return concat(subres, childrens.at(subres) -> getMin());
+                return concat(subres, (new_min < new_max ? childrens.at(subres) -> getMin() : childrens.at(subres) -> getMax()));
             }
         }
         
@@ -184,4 +185,5 @@ int main() {
     tree.add(7);
     tree.add(3);
     std::cout << tree.next(5) << " " << tree.prev(5) << std::endl;
+
 }
